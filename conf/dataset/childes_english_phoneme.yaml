@@ -1,5 +1,5 @@
 name: "phonemetransformers/IPA-CHILDES"
-subconfig: "EnglishNA"
+subconfig: "EnglishUK"
 text_column: "ipa_transcription"
 is_phonemes: True
 max_age: 120

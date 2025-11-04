@@ -4,6 +4,7 @@ defaults:
   - model: gpt2_85M
   - dataset: childes_english_phoneme
   - tokenizer: childes_english_phoneme
+  # - tokenizer: "../GPT2-85M-BPE-PHON-W"
   - experiment: base_experiment # Must be last deafult
 
 data_preprocessing:
