@@ -148,13 +148,6 @@ def check_config(cfg: TransformerSegmentationConfig) -> None:
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(cfg: TransformerSegmentationConfig):
-    parser = argparse.ArgumentParser(description="Training")
-    parser.add_argument('--learning_rate', type=float)
-    parser.add_argument('--batch_size', type=float)
-    parser.add_argument('--training_steps', type=int)
-    
-    args, unknown = parser.parse_known_args()
-
     check_and_set_environment_variables(cfg)
     check_config(cfg)
     setup.set_seed(cfg.experiment.seed)
@@ -237,10 +230,10 @@ def main(cfg: TransformerSegmentationConfig):
         do_eval=True,
         do_predict=False,
         eval_strategy="steps",
-        per_device_train_batch_size=args.batch_size,  # NOTE: We can should maybe use auto_find_batch_size
-        per_device_eval_batch_size=args.batch_size,
-        learning_rate=args.learning_rate,
-        max_steps=args.training_steps,
+        per_device_train_batch_size=cfg.trainer.batch_size,  # NOTE: We can should maybe use auto_find_batch_size
+        per_device_eval_batch_size=cfg.trainer.batch_size,
+        learning_rate=cfg.trainer.lr,
+        max_steps=cfg.trainer.max_training_steps,
         warmup_steps=cfg.trainer.num_warmup_steps,
         seed=cfg.experiment.seed,
         eval_steps=cfg.trainer.eval_steps,
@@ -283,7 +276,7 @@ def main(cfg: TransformerSegmentationConfig):
     # If resuming from final checkpoint, re-evaluate the final model and don't train
     if (
         cfg.experiment.resume_checkpoint_path
-        and int(cfg.experiment.resume_checkpoint_path.split("/")[-1].split("-")[-1]) == args.training_steps
+        and int(cfg.experiment.resume_checkpoint_path.split("/")[-1].split("-")[-1]) == cfg.trainer.max_training_steps
     ):
         trainer._load_from_checkpoint(cfg.experiment.resume_checkpoint_path)
         trainer.state = TrainerState.load_from_json(os.path.join(cfg.experiment.resume_checkpoint_path, "trainer_state.json"))

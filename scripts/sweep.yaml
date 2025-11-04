@@ -12,3 +12,9 @@ parameters:
     values: [4, 8, 16]
   training_steps:
     values: [5_000, 10_000, 15_000]
+
+command:
+  - ${env}
+  - python
+  - ${program}
+  - ${args_no_hyphens}
