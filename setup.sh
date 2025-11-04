@@ -5,8 +5,8 @@ if [ ! -d "env" ]; then
 	pip install -r requirements.txt
 	install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 	pre-commit install
-	huggingface-cli login
-	wandb login
+	# huggingface-cli login
+	# wandb login
 else 
 	source env/bin/activate
 fi
