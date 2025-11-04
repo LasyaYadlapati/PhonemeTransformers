@@ -71,6 +71,7 @@ class DatasetParams:
 class TokenizerParams:
     # tokenizer parameters
     name: str
+    subfolder: str
 
 
 @dataclass
