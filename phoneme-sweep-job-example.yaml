@@ -1,0 +1,64 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: phoneme-sweep-job-example
+  labels:
+    app: phoneme-sweep
+    purpose: training
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+
+      containers:
+        - name: gpu-container
+          image: gitlab-registry.nrp-nautilus.io/zihaozhou/nautilus_tutorial:jupyterhub
+          env:
+            - name: WANDB_ENTITY
+              value: "<your-wandb-namespace>"
+            - name: HF_READ_TOKEN
+              value: "<your-hf-read-token>"
+            - name: HF_WRITE_TOKEN
+              value: "<your-hf-write-token"
+            - name: HUGGINGFACE_HUB_TOKEN
+              value: "<your-hf-read-token"
+            - name: WANDB_API_TOKEN
+              value: "<your-wandb-api-token>"
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              git clone https://github.com/LasyaYadlapati/PhonemeTransformers.git
+              cd PhonemeTransformers
+              ./setup.sh
+              echo "Resolving dependency errors..."
+              pip install hydra-core
+              pip install lm_eval
+              pip install "numpy<2" --force-reinstall
+              pip uninstall -y torch torchvision torchaudio transformers
+              pip install torch==2.3.0 torchvision==0.18.0 torchaudio==2.3.0
+              pip install -U transformers==4.45.2
+              pip install "numpy<1.25" "scipy>=1.9,<1.12" --force-reinstall
+              pip install -U peft==0.6.2
+              pip install wandb
+              wandb login --relogin $WANDB_API_TOKEN
+              echo "Starting Phoneme sweep job..."
+              python run_sweep.py
+              echo "Sweep complete."
+          volumeMounts:
+            - mountPath: /mnt/data
+              name: <your-pvc-name>
+          resources:
+            requests:
+              nvidia.com/gpu: "1"
+              memory: "16Gi"
+              cpu: "4"
+            limits:
+              nvidia.com/gpu: "1"
+              memory: "19Gi"
+              cpu: "4.8"
+
+      volumes:
+        - name: <your-pvc-name>
+          persistentVolumeClaim:
+            claimName: <your-pvc-name>

@@ -1,45 +1,34 @@
-# Phoneme Transformers
+# DSC 180 Report
+## Task
+In the past few weeks, we have worked on replicating [From Babble to Words](https://arxiv.org/pdf/2410.22906), by Goriely et. al. This repo is a fork of theirs, with minor changes for our own experimentation and to make it run properly on our cluster.
 
-This repository contains training scripts, configs and analysis notebooks related to training and evaluating transformers trained on phonemes. This project is still in development.
+## Phoneme-based language models
+Most language models are trained on *graphemes*, or written language(s). However, there is a marked disconnect between almost all languages' writing system and their speech system. In English, for example, ⟨c⟩ can make many different sounds depending on the context.
 
-## Installation
+Thus motivates training directly on *phonemes*, symbols representing sounds. Such models have been used in analysis of phoneme distributions, lyric generation, and text-to-speech tools. Goriely et. al. attempt to *pretrain* a language model on phonemes for downstream language tasks, using a grapheme-to-phoneme conversion tool to transliterate directly from graphemes.
 
-If you plan to use Weights and Biases for logging (i.e. not running in offline mode) you will also need to specify your wandb project to `.env` with the name `WANDB_ENTITY`. In order to interact with the hub, you need to generate read and write [access tokens](https://huggingface.co/docs/hub/security-tokens) from your hugging face account. Once generated, store these values as environment variables in `.env` with the names `HF_READ_TOKEN`, and `HF_WRITE_TOKEN`:
+## Our work
+We've mainly been replicating Goriely et. al.'s work, training our own models to evaluate on language understanding tasks. In the past week, we've focused on running hyperparameter sweeps on the model with wandb, adjusting hyperparameters such as learning rate and max training steps to find the optimal set. To do this, we've had to modify `train.py`, `setup.sh`, and `src/trainer.py`, as well as create `run_sweep.py` as an entry point for the sweeps. We've also had to change some of the configs in the `conf` directory, namely the tokenizers, to fit the updated IPA tokenizers. Our sweeps can be viewed at [https://wandb.ai/lemn-lab/phoneme-sweeps/sweeps](https://wandb.ai/lemn-lab/phoneme-sweeps/sweeps).
 
-```
-export WANDB_ENTITY=""
-export HF_READ_TOKEN=""
-export HF_WRITE_TOKEN=""
-```
+## Replication
+The original README file from the repository has been kept unchanged in Original-README.md, where the authors have included instructions for running their code. To replicate what we did on a kubernetes cluster:
 
-Then, to set up the project, run `./setup.sh`. This sets up the requirements and git hooks for automatic code formatting. Additionally, this script makes sure you are logged into WandB and Huggingface.
-
-## Training
-
-The main entry point for training is `train.py`, which uses a modified Huggingface Trainer to train a model. We use Hydra to specify configurations, including model parameters, with an architecture and dataset specified by the chosen configuration. E.g:
+1. In `scripts/sweep.yaml`, define the configuration for your sweep. This repo uses a hydra config; check `conf/config.yaml` for available hyperparameters. These should be reformatted in `sweep.yaml`, for example:
 
 ```
-python train.py experiment=base_experiment experiment.name=my-experiment experiment.group=debug
+trainer:
+    lr: 1e-3
 ```
-
-### Evaluation
-
-The project supports the [BabyLM evaluation pipeline](https://github.com/babylm/evaluation-pipeline-2024) by specifying the tasks to run during training. This requires downloading and placing the evaluation data in the main directory under `./evaluation_data/babylm_eval`. The project also supports the [BabySLM](https://github.com/babylm/evaluation-pipeline-2024) evaluation pipeline and custom word segmentation experiments. 
-
-### Hyperparameter Tuning
-
-Hyperparameter tuning can be conducted using a Weights & Biases sweep. To create a sweep, run the following:
-
+in `config.yaml` translates to the argument
 ```
-wandb sweep --project PROJECT_NAME scripts/sweep.yaml
+trainer.lr:
 ```
+in sweeps.yaml. More info [here](https://docs.wandb.ai/models/sweeps/define-sweep-configuration).
 
-This will create a new sweep in Weights & Biases with an ID and a URL. You can either run the agent by either:
-1. Running an agent directly using wandb: `wandb agent USER_ID/PROJECT_NAME/SWEEP_ID`
-2. Run the script provided: `sh scripts/run_sweep_agent USER_ID/PROJECT_NAME/SWEEP_ID`
-3. Queue a SLURM job to run the agent on a different node: `sbatch scripts/slurm_submit_sweep_agent.wilkes3 USER_ID/PROJECT_NAME/SWEEP_ID`.
+2. In `run_sweep.py`, change the `PROJECT_NAME` argument to a wandb project to which you want the sweep to write its results.
 
-The first option starts a `wandb` agent on your machine. These can run on multiple machines and will sweep continuously, starting new `wandb` runs in succession. 
-The second option starts a `wandb` agent that will only start a single `wandb` run. This can also be run on multiple machines and each will terminate after the 
-run is complete. The last option queues this script on a remote machine using the SLURM job-queuing system. You will need to adjust the SLURM script to suit your needs. 
+3. Locate `phoneme-sweep-job-example.yaml`. This is the job file for running a sweep. Make sure you put in your own Huggingface read and write tokens, as well as your own wand api token. Create a wandb project, and set the wandb namespace to your username, or the namespace in which you made the project in step 2. Finally, create a pvc with at least 4GiB of space, and mount the job to that pvc.
 
+4. Navigate to this directory, then run `kubectl apply -f ./phoneme-sweep-job-example.yaml` to start the job.
+
+Alternatively, to run locally, do steps 1 and 2, then run `python run_sweep.py`. 
