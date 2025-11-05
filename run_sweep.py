@@ -7,4 +7,4 @@ if __name__ == "__main__":
         sweep_configuration = yaml.safe_load(file)
 
     sweep_id = wandb.sweep(sweep=sweep_configuration, project="phoneme-sweeps")
-    wandb.agent(sweep_id)
+    wandb.agent(sweep_id, count=30)
